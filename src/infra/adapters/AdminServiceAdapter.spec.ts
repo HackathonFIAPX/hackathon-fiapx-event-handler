@@ -42,7 +42,7 @@ describe('AdminServiceAdapter', () => {
             await adapter.updateUserVideoStatus(input);
 
             expect(mockedAxios.create).toHaveBeenCalledWith({
-                baseURL: 'http://mock-admin-service.com',
+                baseURL: 'http://mock-admin-service.com/admin-api',
                 headers: {
                     'Content-Type': 'application/json',
                 },

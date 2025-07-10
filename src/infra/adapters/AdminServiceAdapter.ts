@@ -23,7 +23,7 @@ export class AdminServiceAdapter implements IAdminServiceAdapter {
 
     constructor() {
         this.adminRequester = axios.create({
-            baseURL: envEndpoints.adminService,
+            baseURL: `${envEndpoints.adminService}/admin-api`,
             headers: {
                 'Content-Type': 'application/json',
             },
