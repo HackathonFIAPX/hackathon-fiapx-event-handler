@@ -37,4 +37,9 @@ describe('UpdateVideoStatusController', () => {
             }),
         });
     });
+
+    it('when request withtout constructor parameters, should work right', async () => {
+        const videoUpdateVideoStatusControllerWithoutParams = new UpdateVideoStatusController();
+        expect(videoUpdateVideoStatusControllerWithoutParams).toBeInstanceOf(UpdateVideoStatusController);
+    })
 });

@@ -2,6 +2,7 @@ import { Context, SQSEvent } from "aws-lambda";
 import { Router } from "./controllers/router";
 import { Logger } from "./infra/utils/logger";
 import { ProcessS3NotificationsController } from "./controllers/ProcessS3Notifications.controller";
+import { UpdateVideoStatusController } from "./controllers/UpdateVideoStatus.controller";
 
 export enum EEventHandlerRoutes {
     NOTIFICATION = 'Notification',
@@ -18,10 +19,11 @@ export class EventHandler {
             const { Type, type, data } = body;
 
             const processS3NotificationsController = new ProcessS3NotificationsController();
+            const updateVideoStatusController = new UpdateVideoStatusController();
 
             const router = new Router();
-            router.use(EEventHandlerRoutes.NOTIFICATION,processS3NotificationsController.execute.bind(processS3NotificationsController));
-            router.use(EEventHandlerRoutes.UPDATE_USER_VIDEO_STATUS, (body: any): Promise<any> => { return {} as any });
+            router.use(EEventHandlerRoutes.NOTIFICATION, processS3NotificationsController.execute.bind(processS3NotificationsController));
+            router.use(EEventHandlerRoutes.UPDATE_USER_VIDEO_STATUS, updateVideoStatusController.execute.bind(updateVideoStatusController));
             
             let response;
             if (EEventHandlerRoutes.NOTIFICATION == Type) {
