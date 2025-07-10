@@ -4,7 +4,7 @@ resource "aws_lambda_function" "event_handler" {
   source_code_hash = filebase64sha256("lambda.zip")
   role             = data.aws_iam_role.lab_role.arn
   timeout          = 300
-  handler          = "dist/index.handler"
+  handler          = "dist/src/index.handler"
   runtime          = "nodejs18.x"
 
   environment {
