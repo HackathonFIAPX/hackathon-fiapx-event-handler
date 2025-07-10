@@ -7,6 +7,15 @@ data "terraform_remote_state" "admin-service" {
   }
 }
 
+data "terraform_remote_state" "processor-service" {
+  backend = "s3"
+  config = {
+    bucket = var.aws_bucket_name
+    key    = "processor-service/terraform.tfstate"
+    region = var.aws_region
+  }
+}
+
 data "aws_iam_role" "lab_role" {
   name = "LabRole"
 }
