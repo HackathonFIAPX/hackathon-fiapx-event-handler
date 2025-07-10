@@ -21,7 +21,7 @@ export const handler = async (event: any) => {
 
         const adminAdapter = new AdminServiceAdapter();
 
-        if(count === 1) {
+        if(count === 1 && total > 1) {
           Logger.info("DynamoEventTracker", "Updating video status to CONVERTING_TO_FPS", eventData);
           await adminAdapter.updateUserVideoStatus({
             clientId: eventData.clientId,
