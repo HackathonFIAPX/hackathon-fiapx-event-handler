@@ -1,0 +1,21 @@
+name: Main Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sonar-tests:
+    uses: ./.github/workflows/sonarcloud.yml
+    secrets:
+      sonar_token: ${{ secrets.SONAR_TOKEN }}
+
+  deploy-aws:
+    uses: ./.github/workflows/terraform.yml
+    secrets:
+      aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+    with:
+      aws_region: ${{ vars.AWS_REGION }}
+      tf_main_bucket_name: ${{ vars.TF_MAIN_BUCKET_NAME }}
