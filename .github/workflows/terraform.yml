@@ -43,8 +43,6 @@ jobs:
 
       - name: Generate ZIP to Lambda
         run: zip -r ./devops/terraform/lambda.zip dist node_modules package.json
-      - name: Checkout code
-        uses: actions/checkout@v3
 
       - name: Get Short Commit Hash
         run: echo "TC_IMAGE_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
