@@ -6,6 +6,12 @@ resource "aws_lambda_function" "dynamo_event_tracker" {
   timeout          = 300
   handler          = "dist/src/dynamo-event-tracker.handler"
   runtime          = "nodejs18.x"
+
+  environment {
+    variables = {
+      ADMIN_URL = data.terraform_remote_state.admin-service.outputs.admin_service_api_url
+    }
+  }
 }
 
 resource "aws_lambda_event_source_mapping" "dynamodb_trigger" {
