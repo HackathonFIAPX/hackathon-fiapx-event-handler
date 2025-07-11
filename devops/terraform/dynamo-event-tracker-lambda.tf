@@ -14,9 +14,9 @@ resource "aws_lambda_function" "dynamo_event_tracker" {
   }
 }
 
-# resource "aws_lambda_event_source_mapping" "dynamodb_trigger" {
-#   event_source_arn = data.terraform_remote_state.processor-service.outputs.dynamo_stream_arn
-#   function_name    = aws_lambda_function.dynamo_event_tracker.arn
-#   starting_position = "LATEST"
-#   batch_size          = 10
-# }
+resource "aws_lambda_event_source_mapping" "dynamodb_trigger" {
+  event_source_arn = data.terraform_remote_state.processor-service.outputs.dynamo_stream_arn
+  function_name    = aws_lambda_function.dynamo_event_tracker.arn
+  starting_position = "LATEST"
+  batch_size          = 10
+}
