@@ -1,53 +1,141 @@
+import { ListObjectsV2Command, _Object, S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { AdminServiceAdapter, EVideoStatus } from "./infra/adapters/AdminServiceAdapter";
 import { Logger } from "./infra/utils/logger";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import fs from "fs";
+import archiver from "archiver";
+import { Readable } from "stream";
 
 export const handler = async (event: any) => {
-    for (const record of event.Records) {
-      if (record.eventName === "MODIFY") {
-        const newItem = record.dynamodb.NewImage;
-        const count = parseInt(newItem.count.N);
-        const total = parseInt(newItem.total.N);
-        
-        Logger.info("DynamoEventTracker", `Processing record with ID: ${newItem.id.S}, Count: ${count}, Total: ${total}`);
+  const bucketName = `video-processing`;
 
-        const eventData = {
-            id: newItem.id.S,
-            videoId: newItem.videoId.S,
-            total,
-            count
-        };
-        Logger.info("DynamoEventTracker", "Event data extracted", eventData);
+  async function updateVideoStatus(clientId: string, videoId: string, status: EVideoStatus) {
+    const adminAdapter = new AdminServiceAdapter();
+    return await adminAdapter.updateUserVideoStatus({
+      clientId,
+      videoId,
+      status
+    });
+  }
 
-        const adminAdapter = new AdminServiceAdapter();
+  async function getListOfFilesInBucket(clientId: string, videoId: string): Promise<_Object[]> {
+    const s3 = new S3Client({ region: "us-west-2" });
 
+    const prefix = `temp_videos/${clientId}/${videoId}`;
+
+    const listCommand = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+    });
+
+    const response = await s3.send(listCommand);
+    return response.Contents || [];
+  }
+
+  async function getPresignedUrlFromBucketContent(bucketObject: _Object): Promise<string> {
+    const s3 = new S3Client({ region: "us-west-2" });
+
+    const objectKey = bucketObject.Key!;
+
+    Logger.info("DynamoEventTracker", `Generating presigned URL for object: ${objectKey}`);
+    const presignCommand = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey,
+    });
+
+    const url = await getSignedUrl(s3, presignCommand, { expiresIn: 3600 });
+    Logger.info("DynamoEventTracker", `Presigned URL command created for object: ${objectKey}`, { url });
+    return url;
+  }
+
+  async function uploadToS3(fileName: string, bucketName: string, clientId: string, videoId: string) {
+    Logger.info("DynamoEventTracker", `Uploading file to S3: ${fileName}`, { bucketName, clientId, videoId });
+    const s3 = new S3Client({ region: "us-west-2" });
+    const fileStream = fs.createReadStream("/tmp/final_result.zip");
+
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: `temp_videos/${clientId}/${videoId}/${fileName}`,
+      Body: fileStream,
+      ContentType: "application/zip",
+    });
+
+    await s3.send(command);
+    Logger.info("DynamoEventTracker", `File uploaded to S3: ${fileName}`, { bucketName, clientId, videoId });
+  }
+
+  async function mergeZip(clientId: string, videoId: string) {
+    Logger.info("DynamoEventTracker", `Merging files for clientId: ${clientId}, videoId: ${videoId}`);
+    const files = await getListOfFilesInBucket(clientId, videoId);
+    if (files.length === 0) {
+      Logger.error("DynamoEventTracker", `No files found for clientId: ${clientId}, videoId: ${videoId}`);
+      return;
+    }
+
+    Logger.info("DynamoEventTracker", `Found ${files.length} files for clientId: ${clientId}, videoId: ${videoId}`, { files });
+    const presignedUrls = await Promise.all(files.map(getPresignedUrlFromBucketContent));
+    
+    Logger.info("DynamoEventTracker", `Merging files for clientId: ${clientId}, videoId: ${videoId}`, { presignedUrls });
+    const filename = "final_result.zip";
+    const outputPath = `/tmp/${filename}`;
+    const output = fs.createWriteStream(outputPath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    
+    archive.pipe(output);
+
+    let idx = 0;
+    for (const url of presignedUrls) {
+      const fileName = `zip_${idx}.mp4`;
+      Logger.info("DynamoEventTracker", `Adding file to archive: ${fileName}`, { url });
+      const response = await axios.get<Readable>(url, { responseType: "stream" });
+      archive.append(response.data, { name: fileName });
+      idx++;
+    }
+
+    await archive.finalize();
+    Logger.info("DynamoEventTracker", `Files merged successfully for clientId: ${clientId}, videoId: ${videoId}`, { outputPath });
+    
+    await uploadToS3(filename, bucketName, clientId, videoId);
+    Logger.info("DynamoEventTracker", `Upload completed for clientId: ${clientId}, videoId: ${videoId}`);
+  }
+
+  for (const record of event.Records) {
+    if (record.eventName === "MODIFY") {
+      const newItem = record.dynamodb.NewImage;
+      const count = parseInt(newItem.count.N);
+      const total = parseInt(newItem.total.N);
+      
+      Logger.info("DynamoEventTracker", `Processing record with ID: ${newItem.id.S}, Count: ${count}, Total: ${total}`);
+
+      const eventData = {
+          id: newItem.id.S,
+          videoId: newItem.videoId.S,
+          total,
+          count
+      };
+      Logger.info("DynamoEventTracker", "Event data extracted", eventData);
+
+      try {
         if(count === 1 && total > 1) {
           Logger.info("DynamoEventTracker", "Updating video status to CONVERTING_TO_FPS", eventData);
-          await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.id,
-            videoId: eventData.videoId,
-            status: EVideoStatus.CONVERTING_TO_FPS
-          });
+          await updateVideoStatus(eventData.id, eventData.videoId, EVideoStatus.CONVERTING_TO_FPS);
         } else if (count === 1 && total === 1) {
           Logger.info("DynamoEventTracker", "Updating video status to CONVERTED_TO_FPS", eventData);
-          await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.id,
-            videoId: eventData.videoId,
-            status: EVideoStatus.CONVERTING_TO_FPS
-          });
-          await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.id,
-            videoId: eventData.videoId,
-            status: EVideoStatus.FINISHED
-          })
-        } else if (count === total) {
+          await updateVideoStatus(eventData.id, eventData.videoId, EVideoStatus.CONVERTING_TO_FPS);
+          Logger.info("DynamoEventTracker", "Merging zip for single file", eventData);
+          await mergeZip(eventData.id, eventData.videoId);
           Logger.info("DynamoEventTracker", "Updating video status to FINISHED", eventData);
-          await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.id,
-            videoId: eventData.videoId,
-            status: EVideoStatus.FINISHED
-          }) 
+          await updateVideoStatus(eventData.id, eventData.videoId, EVideoStatus.FINISHED);
+        } else if (count === total) {
+          Logger.info("DynamoEventTracker", "All files processed, merging zip", eventData);
+          await mergeZip(eventData.id, eventData.videoId);
+          Logger.info("DynamoEventTracker", "Updating video status to FINISHED", eventData);
+          await updateVideoStatus(eventData.id, eventData.videoId, EVideoStatus.FINISHED);
         }
+      } catch (error) {
+        Logger.error("DynamoEventTracker", "Error processing record", { error, eventData });
       }
     }
-  };
+  }
+};
   
