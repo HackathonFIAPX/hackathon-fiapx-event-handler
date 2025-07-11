@@ -12,7 +12,6 @@ export const handler = async (event: any) => {
 
         const eventData = {
             id: newItem.id.S,
-            clientId: newItem.clientId.S,
             videoId: newItem.videoId.S,
             total,
             count
@@ -24,26 +23,26 @@ export const handler = async (event: any) => {
         if(count === 1 && total > 1) {
           Logger.info("DynamoEventTracker", "Updating video status to CONVERTING_TO_FPS", eventData);
           await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.clientId,
+            clientId: eventData.id,
             videoId: eventData.videoId,
             status: EVideoStatus.CONVERTING_TO_FPS
           });
         } else if (count === 1 && total === 1) {
           Logger.info("DynamoEventTracker", "Updating video status to CONVERTED_TO_FPS", eventData);
           await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.clientId,
+            clientId: eventData.id,
             videoId: eventData.videoId,
             status: EVideoStatus.CONVERTING_TO_FPS
           });
           await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.clientId,
+            clientId: eventData.id,
             videoId: eventData.videoId,
             status: EVideoStatus.FINISHED
           })
         } else if (count === total) {
           Logger.info("DynamoEventTracker", "Updating video status to FINISHED", eventData);
           await adminAdapter.updateUserVideoStatus({
-            clientId: eventData.clientId,
+            clientId: eventData.id,
             videoId: eventData.videoId,
             status: EVideoStatus.FINISHED
           }) 
