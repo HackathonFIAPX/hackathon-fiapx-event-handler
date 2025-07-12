@@ -88,7 +88,9 @@ export const handler = async (event: any) => {
       const fileName = `zip_${idx}.mp4`;
       Logger.info("DynamoEventTracker", `Adding file to archive: ${fileName}`, { url });
       const response = await axios.get<Readable>(url, { responseType: "stream" });
+      Logger.info("DynamoEventTracker", `File fetched from URL: ${url}`, { fileName });
       archive.append(response.data, { name: fileName });
+      Logger.info("DynamoEventTracker", `File added to archive: ${fileName}`, { idx });
       idx++;
     }
 
