@@ -7,7 +7,7 @@ import archiver from "archiver";
 import { Readable } from "stream";
 
 export const handler = async (event: any) => {
-  const bucketName = `video-processing`;
+  const bucketName = `fiapx-video-fps-bucket`;
 
   async function updateVideoStatus(clientId: string, videoId: string, status: EVideoStatus) {
     const adminAdapter = new AdminServiceAdapter();
@@ -21,7 +21,7 @@ export const handler = async (event: any) => {
   async function getListOfFilesInBucket(clientId: string, videoId: string): Promise<_Object[]> {
     const s3 = new S3Client({ region: "us-west-2" });
 
-    const prefix = `/${clientId}/${videoId}`;
+    const prefix = `${clientId}/${videoId}`;
 
     const listCommand = new ListObjectsV2Command({
       Bucket: bucketName,
@@ -55,7 +55,7 @@ export const handler = async (event: any) => {
 
     const command = new PutObjectCommand({
       Bucket: bucketName,
-      Key: `temp_videos/${clientId}/${videoId}/${fileName}`,
+      Key: `${clientId}/${videoId}/${fileName}`,
       Body: fileStream,
       ContentType: "application/zip",
     });
