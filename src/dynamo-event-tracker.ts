@@ -21,7 +21,7 @@ export const handler = async (event: any) => {
   async function getListOfFilesInBucket(clientId: string, videoId: string): Promise<_Object[]> {
     const s3 = new S3Client({ region: "us-west-2" });
 
-    const prefix = `temp_fps/${clientId}/${videoId}`;
+    const prefix = `/${clientId}/${videoId}`;
 
     const listCommand = new ListObjectsV2Command({
       Bucket: bucketName,
