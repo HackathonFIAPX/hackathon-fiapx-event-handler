@@ -87,10 +87,23 @@ export const handler = async (event: any) => {
     for (const url of presignedUrls) {
       const fileName = `zip_${idx}.mp4`;
       Logger.info("DynamoEventTracker", `Adding file to archive: ${fileName}`, { url });
-      const response = await axios.get<Readable>(url, { responseType: "stream" });
-      Logger.info("DynamoEventTracker", `File fetched from URL: ${url}`, { fileName });
-      archive.append(response.data, { name: fileName });
-      Logger.info("DynamoEventTracker", `File added to archive: ${fileName}`, { idx });
+
+      try {
+        const response = await axios.get<Readable>(url, { responseType: "stream" });
+        
+        Logger.info("DynamoEventTracker", `File fetched from URL: ${url}`, { fileName });
+
+        try {
+          archive.append(response.data, { name: fileName });
+          Logger.info("DynamoEventTracker", `File added to archive: ${fileName}`, { idx });
+        } catch (archiveError) {
+          Logger.error("DynamoEventTracker", `Error adding file to archive: ${fileName}`, { error: archiveError, idx });
+          throw archiveError;
+        }
+      } catch (error) {
+        Logger.error("DynamoEventTracker", `Error from axios: ${url}`, { error, fileName });
+        throw error;
+      }
       idx++;
     }
 
