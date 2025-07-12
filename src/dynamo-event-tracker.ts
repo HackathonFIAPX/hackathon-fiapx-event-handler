@@ -6,6 +6,7 @@ import fs from "fs";
 import archiver from "archiver";
 import { Readable } from "stream";
 import { envAWS } from "./config/aws";
+import axios from "axios";
 
 export const handler = async (event: any) => {
   const bucketName = `fiapx-video-fps-bucket`;
@@ -104,7 +105,7 @@ export const handler = async (event: any) => {
       Logger.info("DynamoEventTracker", `Adding file to archive: ${fileName}`, { url });
 
       try {
-        const response :any = await axios.get(url);
+        const response = await axios.get<Readable>(url, { responseType: "stream" });
         
         Logger.info("DynamoEventTracker", `File fetched from URL: ${url}`, { fileName });
 
