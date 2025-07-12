@@ -5,6 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import fs from "fs";
 import archiver from "archiver";
 import { Readable } from "stream";
+import { envAWS } from "./config/aws";
 
 export const handler = async (event: any) => {
   const bucketName = `fiapx-video-fps-bucket`;
@@ -33,7 +34,14 @@ export const handler = async (event: any) => {
   }
 
   async function getPresignedUrlFromBucketContent(bucketObject: _Object): Promise<string> {
-    const s3 = new S3Client({ region: "us-west-2" });
+    const s3 = new S3Client({
+      region: envAWS.region,
+      credentials: {
+          accessKeyId: envAWS.accessKeyId,
+          secretAccessKey: envAWS.secretAccessKey,
+          sessionToken: envAWS.sessionToken,
+      }
+  });
 
     const objectKey = bucketObject.Key!;
 
@@ -50,7 +58,14 @@ export const handler = async (event: any) => {
 
   async function uploadToS3(fileName: string, bucketName: string, clientId: string, videoId: string) {
     Logger.info("DynamoEventTracker", `Uploading file to S3: ${fileName}`, { bucketName, clientId, videoId });
-    const s3 = new S3Client({ region: "us-west-2" });
+    const s3 = new S3Client({
+      region: envAWS.region,
+      credentials: {
+          accessKeyId: envAWS.accessKeyId,
+          secretAccessKey: envAWS.secretAccessKey,
+          sessionToken: envAWS.sessionToken,
+      }
+  });
     const fileStream = fs.createReadStream("/tmp/final_result.zip");
 
     const command = new PutObjectCommand({
@@ -89,7 +104,7 @@ export const handler = async (event: any) => {
       Logger.info("DynamoEventTracker", `Adding file to archive: ${fileName}`, { url });
 
       try {
-        const response = await axios.get<Readable>(url, { responseType: "stream" });
+        const response :any = await axios.get(url);
         
         Logger.info("DynamoEventTracker", `File fetched from URL: ${url}`, { fileName });
 
