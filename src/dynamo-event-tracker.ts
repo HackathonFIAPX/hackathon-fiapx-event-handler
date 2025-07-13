@@ -144,6 +144,17 @@ export const handler = async (event: any) => {
     await archive.finalize();
     Logger.info("DynamoEventTracker", `Files merged successfully for clientId: ${clientId}, videoId: ${videoId}`, { outputPath });
     
+    await new Promise<void>((resolve, reject) => {
+      output.on('close', () => {
+          Logger.info("DynamoEventTracker", `Stream de saída fechado para: ${outputPath}`);
+          resolve();
+      });
+      output.on('error', (err) => {
+          Logger.error("DynamoEventTracker", `Erro no stream de saída para: ${outputPath}`, { error: err });
+          reject(err);
+      });
+    });
+
     await uploadToS3(filename, bucketName, clientId, videoId);
     Logger.info("DynamoEventTracker", `Upload completed for clientId: ${clientId}, videoId: ${videoId}`);
   }
