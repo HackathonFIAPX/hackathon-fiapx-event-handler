@@ -73,7 +73,7 @@ export const handler = async (event: any) => {
 
     Logger.info("DynamoEventTracker", `Files in /tmp directory:`, { files });
     files.forEach(file => {
-      const filePath = path.join("tmp", file);
+      const filePath = path.join("/tmp", file);
       const stats = fs.statSync(filePath);
       const fileInfo = {
           name: file,
