@@ -7,6 +7,7 @@ import archiver from "archiver";
 import { Readable } from "stream";
 import { envAWS } from "./config/aws";
 import axios from "axios";
+import path from "path";
 
 export const handler = async (event: any) => {
   const bucketName = `fiapx-video-fps-bucket`;
@@ -66,16 +67,33 @@ export const handler = async (event: any) => {
           secretAccessKey: envAWS.secretAccessKey,
           sessionToken: envAWS.sessionToken,
       }
-  });
+    });
+
+    const files = fs.readdirSync("/tmp");
+
+    Logger.info("DynamoEventTracker", `Files in /tmp directory:`, { files });
+    files.forEach(file => {
+      const filePath = path.join("tmp", file);
+      const stats = fs.statSync(filePath);
+      const fileInfo = {
+          name: file,
+          size: stats.size,
+          isDir: stats.isDirectory(),
+      };
+      Logger.info("DynamoEventTracker", `File info:`, { fileInfo, event });
+    });
+
     const fileStream = fs.createReadStream("/tmp/final_result.zip");
 
+    const fileKey = `${clientId}/${videoId}/${fileName}`;
     const command = new PutObjectCommand({
       Bucket: bucketName,
-      Key: `${clientId}/${videoId}/${fileName}`,
+      Key: fileKey,
       Body: fileStream,
       ContentType: "application/zip",
     });
 
+    Logger.info("DynamoEventTracker", `Preparing to upload file: ${fileName}`, { bucketName, fileKey });
     await s3.send(command);
     Logger.info("DynamoEventTracker", `File uploaded to S3: ${fileName}`, { bucketName, clientId, videoId });
   }
