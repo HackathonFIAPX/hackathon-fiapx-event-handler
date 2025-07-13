@@ -119,7 +119,7 @@ export const handler = async (event: any) => {
 
     let idx = 0;
     for (const url of presignedUrls) {
-      const fileName = `zip_${idx}.mp4`;
+      const fileName = `zip_${idx}.zip`;
       Logger.info("DynamoEventTracker", `Adding file to archive: ${fileName}`, { url });
 
       try {
